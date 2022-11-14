@@ -16,6 +16,8 @@
 
 package com.starfireaviation.events.controller;
 
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.map.IMap;
 import com.starfireaviation.common.exception.AccessDeniedException;
 import com.starfireaviation.common.exception.ConflictException;
 import com.starfireaviation.common.exception.InvalidPayloadException;
@@ -25,6 +27,7 @@ import com.starfireaviation.common.model.EventType;
 import com.starfireaviation.events.model.EventEntity;
 import com.starfireaviation.events.service.EventService;
 import com.starfireaviation.events.validation.EventValidator;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -66,19 +69,33 @@ public class EventController {
     private final EventValidator eventValidator;
 
     /**
+     * Events cache.
+     */
+    private final IMap<Long, Event> cache;
+
+    /**
+     * Upcoming Events cache.
+     */
+    private final IMap<String, List<Event>> upcomingCache;
+
+    /**
      * EventController.
      *
      * @param eService   EventService
      * @param eValidator EventValidator
+     * @param hazelcastInstance HazelcastInstance
      */
     public EventController(final EventService eService,
-                           final EventValidator eValidator) {
+                           final EventValidator eValidator,
+                           @Qualifier("events") final HazelcastInstance hazelcastInstance) {
         eventService = eService;
         eventValidator = eValidator;
+        cache = hazelcastInstance.getMap("events");
+        upcomingCache = hazelcastInstance.getMap("upcomingEvents");
     }
 
     /**
-     * Creates a event.
+     * Creates an event.
      *
      * @param event     Event
      * @param principal Principal
@@ -107,10 +124,15 @@ public class EventController {
      *                                   perform operation
      */
     @GetMapping(path = { "/{eventId}" })
-    public Event get(@PathVariable("eventId") final long eventId, final Principal principal)
+    public Event get(@PathVariable("eventId") final Long eventId, final Principal principal)
             throws AccessDeniedException {
         eventValidator.accessAnyAuthenticated(principal);
-        return map(eventService.get(eventId));
+        if (cache.containsKey(eventId)) {
+            return cache.get(eventId);
+        }
+        final Event event = map(eventService.get(eventId));
+        cache.put(eventId, event);
+        return event;
     }
 
     /**
@@ -139,10 +161,13 @@ public class EventController {
      *                                   perform operation
      */
     @DeleteMapping(path = { "/{eventId}" })
-    public void delete(@PathVariable("eventId") final long eventId, final Principal principal)
+    public void delete(@PathVariable("eventId") final Long eventId, final Principal principal)
             throws AccessDeniedException {
         eventValidator.accessAdminOrInstructor(principal);
         eventService.delete(eventId);
+        if (cache.containsKey(eventId)) {
+            cache.delete(eventId);
+        }
     }
 
     /**
@@ -191,7 +216,11 @@ public class EventController {
         if (actualCount > MAX_UPCOMING_COUNT) {
             actualCount = MAX_UPCOMING_COUNT;
         }
-        return eventService
+        final String key = getKey(type, count);
+        if (upcomingCache.containsKey(key)) {
+            return upcomingCache.get(key);
+        }
+        final List<Event> upcoming = eventService
                 .getAll()
                 .stream()
                 .filter(
@@ -202,6 +231,8 @@ public class EventController {
                 .limit(actualCount)
                 .map(this::map)
                 .collect(Collectors.toList());
+        upcomingCache.put(key, upcoming);
+        return upcoming;
     }
 
     /**
@@ -210,7 +241,6 @@ public class EventController {
      * @param eventId   event ID
      * @param userId    user ID
      * @param principal Principal
-     * @throws ResourceNotFoundException when event nor user is found
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
@@ -218,7 +248,7 @@ public class EventController {
     public void register(
             @PathVariable("eventId") final long eventId,
             @PathVariable("userId") final long userId,
-            final Principal principal) throws ResourceNotFoundException, AccessDeniedException {
+            final Principal principal) throws AccessDeniedException {
         eventValidator.accessAdminInstructorOrSpecificUser(userId, principal);
         final EventEntity event = eventService.get(eventId);
         if ((!event.isPrivateEvent()
@@ -317,6 +347,23 @@ public class EventController {
         }
     }
 
+    /**
+     * Generates a key from the provided values.
+     *
+     * @param type EventType
+     * @param count count
+     * @return key
+     */
+    private String getKey(final EventType type, final int count) {
+        return String.format("type=%s;count=%s", type, count);
+    }
+
+    /**
+     * Maps an EventEntity to an Event.
+     *
+     * @param eventEntity EventEntity
+     * @return Event
+     */
     private Event map(final EventEntity eventEntity) {
         final Event event = new Event();
         event.setId(eventEntity.getId());
@@ -332,11 +379,17 @@ public class EventController {
         event.setStartTime(eventEntity.getStartTime());
         event.setLead(eventEntity.getLead());
         event.setLessonPlanId(eventEntity.getLessonPlanId());
-        event.setParticipantIds(eventEntity.getParticipants());
+        event.setParticipantIds(eventService.getParticipants(eventEntity.getId()));
         event.setTitle(eventEntity.getTitle());
         return event;
     }
 
+    /**
+     * Maps an Event to and EventEntity.
+     *
+     * @param event Event
+     * @return EventEntity
+     */
     private EventEntity map(final Event event) {
         final EventEntity eventEntity = new EventEntity();
         eventEntity.setEventType(event.getEventType());
@@ -346,7 +399,6 @@ public class EventController {
         eventEntity.setLead(event.getLead());
         eventEntity.setStarted(eventEntity.isStarted());
         eventEntity.setCalendarUrl(eventEntity.getCalendarUrl());
-        eventEntity.setParticipants(event.getParticipantIds());
         eventEntity.setTitle(event.getTitle());
         eventEntity.setCompleted(event.isCompleted());
         eventEntity.setCompletedTime(event.getCompletedTime());

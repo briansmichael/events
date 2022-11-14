@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 
 /**
  * EventValidator.
@@ -273,6 +274,7 @@ public class EventValidator {
         final LocalDateTime after = event.getStartTime().plusMinutes(MINUTE_RANGE);
         final boolean conflict = eventRepository
                 .findAll()
+                .orElse(new ArrayList<>())
                 .stream()
                 .filter(eventEntity -> eventEntity.getStartTime().isAfter(LocalDateTime.now()))
                 .anyMatch(eventEntity -> {

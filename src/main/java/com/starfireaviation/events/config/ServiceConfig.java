@@ -17,6 +17,12 @@
 package com.starfireaviation.events.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hazelcast.config.Config;
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+import com.starfireaviation.common.CommonConstants;
+import com.starfireaviation.events.model.EventParticipantRepository;
 import com.starfireaviation.events.model.EventRepository;
 import com.starfireaviation.events.service.DataService;
 import com.starfireaviation.events.service.EventService;
@@ -44,13 +50,15 @@ public class ServiceConfig {
      * EventService.
      *
      * @param eRepository  EventRepository
+     * @param epRepository EventParticipantRepository
      * @param dService DataService
      * @return EventService
      */
     @Bean
     public EventService eventService(final EventRepository eRepository,
+                                     final EventParticipantRepository epRepository,
                                      final DataService dService) {
-        return new EventService(eRepository, dService);
+        return new EventService(eRepository, epRepository, dService);
     }
 
 
@@ -106,6 +114,20 @@ public class ServiceConfig {
     public EventValidator eventValidator(final EventRepository eventRepository,
                                          final DataService dService) {
         return new EventValidator(eventRepository, dService);
+    }
+
+    /**
+     * Hazelcast Events Instance.
+     *
+     * @return HazelcastInstance
+     */
+    @Bean("events")
+    public HazelcastInstance hazelcastQuestionsInstance() {
+        return Hazelcast.newHazelcastInstance(
+                new Config().addMapConfig(
+                        new MapConfig("events")
+                                .setTimeToLiveSeconds(CommonConstants.THREE_HUNDRED)
+                                .setMaxIdleSeconds(CommonConstants.THREE_HUNDRED)));
     }
 
 }

@@ -16,14 +16,18 @@
 
 package com.starfireaviation.events.service;
 
-import com.starfireaviation.common.exception.ResourceNotFoundException;
 import com.starfireaviation.common.model.Role;
 import com.starfireaviation.events.model.EventEntity;
+import com.starfireaviation.events.model.EventParticipant;
+import com.starfireaviation.events.model.EventParticipantRepository;
 import com.starfireaviation.events.model.EventRepository;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * EventService.
@@ -36,6 +40,11 @@ public class EventService {
     private final EventRepository eventRepository;
 
     /**
+     * EventRepository.
+     */
+    private final EventParticipantRepository eventParticipantRepository;
+
+    /**
      * DataService.
      */
     private final DataService dataService;
@@ -44,11 +53,14 @@ public class EventService {
      * EventService.
      *
      * @param eRepository  EventRepository
+     * @param epRepository EventParticipantRepository
      * @param dService     DataService
      */
     public EventService(final EventRepository eRepository,
+                        final EventParticipantRepository epRepository,
                         final DataService dService) {
         eventRepository = eRepository;
+        eventParticipantRepository = epRepository;
         dataService = dService;
     }
 
@@ -69,14 +81,12 @@ public class EventService {
      * Deletes a event.
      *
      * @param id Long
-     * @return Event
      */
-    public EventEntity delete(final long id) {
+    public void delete(final long id) {
         final EventEntity event = get(id);
         if (event != null) {
             eventRepository.delete(event);
         }
-        return event;
     }
 
     /**
@@ -85,12 +95,7 @@ public class EventService {
      * @return list of Event
      */
     public List<EventEntity> getAll() {
-        List<EventEntity> events = new ArrayList<>();
-        List<EventEntity> eventEntities = eventRepository.findAll();
-        for (EventEntity eventEntity : eventEntities) {
-            events.add(get(eventEntity.getId()));
-        }
-        return events;
+        return eventRepository.findAll().orElse(new ArrayList<>());
     }
 
     /**
@@ -100,8 +105,7 @@ public class EventService {
      * @return Event
      */
     public EventEntity get(final long id) {
-        final EventEntity event = eventRepository.findById(id);
-        return event;
+        return eventRepository.findById(id).orElseThrow();
     }
 
     /**
@@ -109,13 +113,20 @@ public class EventService {
      *
      * @param eventId Event ID
      * @param userId  User ID
-     * @throws ResourceNotFoundException when the event or user is not found
      */
-    public void register(final Long eventId, final Long userId) throws ResourceNotFoundException {
-        final EventEntity event = get(eventId);
-        if (!event.getParticipants().contains(userId)) {
-            event.getParticipants().add(userId);
-            eventRepository.save(event);
+    public void register(final Long eventId, final Long userId) {
+        final Optional<EventParticipant> eventParticipantOpt = eventParticipantRepository.findByUserId(userId)
+                .orElse(new ArrayList<>())
+                .stream()
+                .filter(eventParticipant -> eventParticipant.getEventId() == eventId)
+                .findFirst();
+        if (eventParticipantOpt.isEmpty()) {
+            final EventParticipant eventParticipant = new EventParticipant();
+            eventParticipant.setEventId(eventId);
+            eventParticipant.setUserId(userId);
+            eventParticipant.setCreatedAt(new Date());
+            eventParticipant.setUpdatedAt(new Date());
+            eventParticipantRepository.save(eventParticipant);
         }
     }
 
@@ -124,14 +135,13 @@ public class EventService {
      *
      * @param eventId Event ID
      * @param userId  User ID
-     * @throws ResourceNotFoundException when the event or user is not found
      */
-    public void unregister(final Long eventId, final Long userId) throws ResourceNotFoundException {
-        final EventEntity event = get(eventId);
-        if (event.getParticipants().contains(userId)) {
-            event.getParticipants().remove(userId);
-            eventRepository.save(event);
-        }
+    public void unregister(final Long eventId, final Long userId) {
+        eventParticipantRepository.findByUserId(userId)
+                .orElse(new ArrayList<>())
+                .stream()
+                .filter(eventParticipant -> eventParticipant.getEventId() == eventId)
+                .forEach(eventParticipantRepository::delete);
     }
 
     /**
@@ -142,11 +152,10 @@ public class EventService {
      * @return whether or not user is registered
      */
     public boolean isRegistered(final Long eventId, final Long userId) {
-        final EventEntity event = get(eventId);
-        if (event.getParticipants().contains(userId)) {
-            return Boolean.TRUE;
-        }
-        return Boolean.FALSE;
+        return eventParticipantRepository.findByUserId(userId)
+                .orElse(new ArrayList<>())
+                .stream()
+                .anyMatch(eventParticipant -> eventParticipant.getEventId() == eventId);
     }
 
     /**
@@ -156,19 +165,26 @@ public class EventService {
      * @return list of User IDs
      */
     public List<Long> getAllSupportingInstructors(final Long eventId) {
-        final List<Long> supportingInstructors = new ArrayList<>();
         final Long eventLead = get(eventId).getLead();
-        final EventEntity event = get(eventId);
-        event.getParticipants()
+        return getParticipants(eventId)
                 .stream()
                 .distinct()
-                .forEach(userId -> {
-                    if (!Objects.equals(userId, eventLead)
-                            && dataService.getUser(userId).getRole() == Role.INSTRUCTOR) {
-                        supportingInstructors.add(userId);
-                    }
-                });
-        return supportingInstructors;
+                .filter(userId -> !Objects.equals(userId, eventLead)
+                        && dataService.getUser(userId).getRole() == Role.INSTRUCTOR)
+                .collect(Collectors.toList());
     }
 
+    /**
+     * Get participant list for an event.
+     *
+     * @param eventId Event ID
+     * @return list of user IDs
+     */
+    public List<Long> getParticipants(final Long eventId) {
+        return eventParticipantRepository.findByEventId(eventId)
+                .orElse(new ArrayList<>())
+                .stream()
+                .map(EventParticipant::getUserId)
+                .collect(Collectors.toList());
+    }
 }

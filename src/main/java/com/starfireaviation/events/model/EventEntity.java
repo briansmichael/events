@@ -33,7 +33,6 @@ import javax.persistence.Table;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Date;
-import java.util.List;
 
 /**
  * Event.
@@ -135,11 +134,6 @@ public class EventEntity implements Serializable {
      */
     @Column(name = "lesson_plan_id", nullable = false)
     private Long lessonPlanId;
-
-    /**
-     * Event participants.
-     */
-    private List<Long> participants;
 
     /**
      * Event lead (or primary instructor).

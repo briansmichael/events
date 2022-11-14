@@ -19,6 +19,7 @@ package com.starfireaviation.events.model;
 import org.springframework.data.repository.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * EventRepository.
@@ -37,7 +38,7 @@ public interface EventRepository extends Repository<EventEntity, Long> {
      *
      * @return list of Events
      */
-    List<EventEntity> findAll();
+    Optional<List<EventEntity>> findAll();
 
     /**
      * Gets an event.
@@ -45,7 +46,7 @@ public interface EventRepository extends Repository<EventEntity, Long> {
      * @param id Long
      * @return Event
      */
-    EventEntity findById(long id);
+    Optional<EventEntity> findById(long id);
 
     /**
      * Saves an event.
