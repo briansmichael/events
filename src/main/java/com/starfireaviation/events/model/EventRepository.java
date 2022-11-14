@@ -23,21 +23,21 @@ import java.util.List;
 /**
  * EventRepository.
  */
-public interface EventRepository extends Repository<Event, Long> {
+public interface EventRepository extends Repository<EventEntity, Long> {
 
     /**
      * Deletes an event.
      *
      * @param user Event
      */
-    void delete(Event user);
+    void delete(EventEntity user);
 
     /**
      * Gets all events.
      *
      * @return list of Events
      */
-    List<Event> findAll();
+    List<EventEntity> findAll();
 
     /**
      * Gets an event.
@@ -45,7 +45,7 @@ public interface EventRepository extends Repository<Event, Long> {
      * @param id Long
      * @return Event
      */
-    Event findById(long id);
+    EventEntity findById(long id);
 
     /**
      * Saves an event.
@@ -53,5 +53,5 @@ public interface EventRepository extends Repository<Event, Long> {
      * @param user Event
      * @return Event
      */
-    Event save(Event user);
+    EventEntity save(EventEntity user);
 }

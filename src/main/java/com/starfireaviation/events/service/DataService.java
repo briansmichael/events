@@ -14,15 +14,31 @@
  *  limitations under the License.
  */
 
-package com.starfireaviation.events.model;
+package com.starfireaviation.events.service;
 
-/**
- * EventType.
- */
-public enum EventType {
+import com.starfireaviation.common.model.User;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DataService {
 
     /**
-     * GROUND_SCHOOL.
+     * Gets a User by username.
+     *
+     * @param name user name
+     * @return User
      */
-    GROUNDSCHOOL;
+    public User getUser(final String name) {
+        return null;
+    }
+
+    /**
+     * Gets a User by ID.
+     *
+     * @param userId user ID
+     * @return User
+     */
+    public User getUser(final Long userId) {
+        return null;
+    }
 }

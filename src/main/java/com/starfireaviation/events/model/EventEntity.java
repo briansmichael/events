@@ -16,16 +16,23 @@
 
 package com.starfireaviation.events.model;
 
-import com.starfireaviation.model.CommonConstants;
+import com.starfireaviation.common.CommonConstants;
+import com.starfireaviation.common.model.EventType;
 import lombok.Data;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
 import javax.persistence.Table;
-import javax.persistence.Transient;
+import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -34,7 +41,7 @@ import java.util.List;
 @Data
 @Entity
 @Table(name = "EVENT")
-public class Event extends BaseEntity {
+public class EventEntity implements Serializable {
 
     /**
      * Default SerialVersionUID.
@@ -42,9 +49,30 @@ public class Event extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     /**
+     * ID.
+     */
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    /**
+     * Created At.
+     */
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreatedDate
+    private Date createdAt = new Date();
+
+    /**
+     * Updated At.
+     */
+    @Column(name = "updated_at", nullable = false)
+    @LastModifiedDate
+    private Date updatedAt = new Date();
+
+    /**
      * Title.
      */
-    @Column(name = "title", nullable = false, length = CommonConstants.TWO_HUNDRED_FIFTY_FIVE)
+    @Column(name = "title", nullable = false)
     private String title;
 
     /**
@@ -74,13 +102,13 @@ public class Event extends BaseEntity {
     /**
      * Google calendar URL.
      */
-    @Column(name = "calendar_url", nullable = true, length = CommonConstants.TWO_HUNDRED_FIFTY_FIVE)
+    @Column(name = "calendar_url")
     private String calendarUrl;
 
     /**
      * Checkin code.
      */
-    @Column(name = "checkin_code", nullable = true, length = CommonConstants.FOUR)
+    @Column(name = "checkin_code", length = CommonConstants.FOUR)
     private String checkinCode;
 
     /**
@@ -103,12 +131,6 @@ public class Event extends BaseEntity {
     private EventType eventType;
 
     /**
-     * Address.
-     */
-    @Transient
-    private Address address;
-
-    /**
      * LessonPlan ID.
      */
     @Column(name = "lesson_plan_id", nullable = false)
@@ -117,8 +139,7 @@ public class Event extends BaseEntity {
     /**
      * Event participants.
      */
-    @Transient
-    private List<User> participants;
+    private List<Long> participants;
 
     /**
      * Event lead (or primary instructor).

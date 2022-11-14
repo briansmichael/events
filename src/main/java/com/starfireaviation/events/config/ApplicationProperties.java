@@ -20,55 +20,21 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.Map;
-
 /**
- * GroundSchool Properties.
+ * Event Properties.
  */
 @Getter
 @Setter
-@ConfigurationProperties("groundschool")
+@ConfigurationProperties("events")
 public class ApplicationProperties {
 
     /**
-     * GSDecryptor enabled flag.
+     * Read Timeout.
      */
-    private boolean gsDecryptorEnabled;
+    private int readTimeout;
 
     /**
-     * SecretKey.
+     * Connect Timeout.
      */
-    private String secretKey;
-
-    /**
-     * Init Vector.
-     */
-    private String initVector;
-
-    /**
-     * Database location.
-     */
-    private String dbLocation;
-
-    /**
-     * Content source location.
-     */
-    private String contentSourceLocation;
-
-    /**
-     * Update Courses Cron Expression.
-     */
-    private String updateCoursesCron;
-
-    /**
-     * Course Update Map.
-     *
-     * Note: key = course; value = cron
-     */
-    private Map<String, String> courseUpdateJobs;
-
-    /**
-     * UI Host.
-     */
-    private String uiHost;
+    private int connectTimeout;
 }

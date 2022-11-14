@@ -16,8 +16,8 @@
 
 package com.starfireaviation.events;
 
-import com.starfireaviation.model.CommonConstants;
-import com.starfireaviation.model.Event;
+import com.starfireaviation.common.CommonConstants;
+import com.starfireaviation.common.model.Event;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;

@@ -14,21 +14,7 @@
  *  limitations under the License.
  */
 
-package com.starfireaviation.events;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-@SpringBootApplication
-public class EventsApplication {
-
-    /**
-     * Events Application.
-     *
-     * @param args arguments
-     */
-    public static void main(final String[] args) {
-        SpringApplication.run(EventsApplication.class, args);
-    }
-
-}
+/**
+ * Controller classes.
+ */
+package com.starfireaviation.events.controller;

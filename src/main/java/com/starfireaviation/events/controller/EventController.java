@@ -16,11 +16,13 @@
 
 package com.starfireaviation.events.controller;
 
-import com.starfireaviation.events.exception.AccessDeniedException;
-import com.starfireaviation.events.exception.ConflictException;
-import com.starfireaviation.events.exception.InvalidPayloadException;
-import com.starfireaviation.events.exception.ResourceNotFoundException;
-import com.starfireaviation.events.model.Event;
+import com.starfireaviation.common.exception.AccessDeniedException;
+import com.starfireaviation.common.exception.ConflictException;
+import com.starfireaviation.common.exception.InvalidPayloadException;
+import com.starfireaviation.common.exception.ResourceNotFoundException;
+import com.starfireaviation.common.model.Event;
+import com.starfireaviation.common.model.EventType;
+import com.starfireaviation.events.model.EventEntity;
 import com.starfireaviation.events.service.EventService;
 import com.starfireaviation.events.validation.EventValidator;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -36,7 +38,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -46,25 +47,13 @@ import java.util.stream.Collectors;
  */
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
-@RequestMapping({
-        "/events"
-})
+@RequestMapping({ "/api/events" })
 public class EventController {
 
     /**
      * MAX_UPCOMING_COUNT.
      */
     public static final int MAX_UPCOMING_COUNT = 10;
-
-    /**
-     * UPCOMING_DAYS.
-     */
-    public static final int UPCOMING_DAYS = 5;
-
-    /**
-     * RSVP_DAYS.
-     */
-    public static final int RSVP_DAYS = 1;
 
     /**
      * EventService.
@@ -94,7 +83,6 @@ public class EventController {
      * @param event     Event
      * @param principal Principal
      * @return Event
-     * @throws ResourceNotFoundException when no event is found
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      * @throws InvalidPayloadException   when invalid data is provided
@@ -102,14 +90,11 @@ public class EventController {
      *                                   of the provided event
      */
     @PostMapping
-    public Event post(@RequestBody final Event event, final Principal principal) throws ResourceNotFoundException,
-            AccessDeniedException, InvalidPayloadException, ConflictException {
+    public Event post(@RequestBody final Event event, final Principal principal)
+            throws AccessDeniedException, InvalidPayloadException, ConflictException {
         eventValidator.validate(event);
         eventValidator.accessAdminOrInstructor(principal);
-        if (event == null) {
-            return event;
-        }
-        return eventService.store(event);
+        return map(eventService.store(map(event)));
     }
 
     /**
@@ -118,18 +103,14 @@ public class EventController {
      * @param eventId   Long
      * @param principal Principal
      * @return Event
-     * @throws ResourceNotFoundException when address is not found
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
-    @GetMapping(path = {
-            "/{eventId}"
-    })
+    @GetMapping(path = { "/{eventId}" })
     public Event get(@PathVariable("eventId") final long eventId, final Principal principal)
-            throws ResourceNotFoundException,
-            AccessDeniedException {
+            throws AccessDeniedException {
         eventValidator.accessAnyAuthenticated(principal);
-        return eventService.get(eventId);
+        return map(eventService.get(eventId));
     }
 
     /**
@@ -138,18 +119,15 @@ public class EventController {
      * @param event     Event
      * @param principal Principal
      * @return Event
-     * @throws ResourceNotFoundException when no event is found
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
     @PutMapping
-    public Event put(@RequestBody final Event event, final Principal principal) throws ResourceNotFoundException,
-            AccessDeniedException {
+    public Event put(@RequestBody final Event event, final Principal principal)
+            throws AccessDeniedException, ConflictException, InvalidPayloadException {
         eventValidator.accessAdminOrInstructor(principal);
-        if (event == null) {
-            return event;
-        }
-        return eventService.store(event);
+        eventValidator.validate(event);
+        return map(eventService.store(map(event)));
     }
 
     /**
@@ -157,19 +135,14 @@ public class EventController {
      *
      * @param eventId   Long
      * @param principal Principal
-     * @return Event
-     * @throws ResourceNotFoundException when event is not found
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
-    @DeleteMapping(path = {
-            "/{eventId}"
-    })
-    public Event delete(@PathVariable("eventId") final long eventId, final Principal principal)
-            throws ResourceNotFoundException,
-            AccessDeniedException {
+    @DeleteMapping(path = { "/{eventId}" })
+    public void delete(@PathVariable("eventId") final long eventId, final Principal principal)
+            throws AccessDeniedException {
         eventValidator.accessAdminOrInstructor(principal);
-        return eventService.delete(eventId);
+        eventService.delete(eventId);
     }
 
     /**
@@ -178,14 +151,13 @@ public class EventController {
      * @param principal Principal
      *
      * @return list of Event
-     * @throws ResourceNotFoundException when address is not found
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
     @GetMapping
-    public List<Event> list(final Principal principal) throws ResourceNotFoundException, AccessDeniedException {
+    public List<Event> list(final Principal principal) throws AccessDeniedException {
         eventValidator.accessAdminOrInstructor(principal);
-        return eventService.getAll();
+        return eventService.getAll().stream().map(this::map).collect(Collectors.toList());
     }
 
     /**
@@ -194,59 +166,14 @@ public class EventController {
      * @param eventId   Event ID
      * @param principal Principal
      * @return list of User IDs
-     * @throws ResourceNotFoundException when event is not found
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
-    @GetMapping(path = {
-            "/{eventId}/instructors"
-    })
+    @GetMapping(path = { "/{eventId}/instructors" })
     public List<Long> supportingInstructors(@PathVariable("eventId") final long eventId, final Principal principal)
-            throws ResourceNotFoundException, AccessDeniedException {
+            throws AccessDeniedException {
         eventValidator.accessAnyAuthenticated(principal);
         return eventService.getAllSupportingInstructors(eventId);
-    }
-
-    /**
-     * Gets whether or not a user is a member for an event.
-     *
-     * @param eventId   Event ID
-     * @param userId    User ID
-     * @param principal Principal
-     * @return member
-     * @throws ResourceNotFoundException when event or user is not found
-     * @throws AccessDeniedException     when user doesn't have permission to
-     *                                   perform operation
-     */
-    @GetMapping(path = {
-            "/{eventId}/{userId}/member"
-    })
-    public boolean isMember(
-            @PathVariable("eventId") final long eventId,
-            @PathVariable("userId") final long userId,
-            final Principal principal)
-            throws ResourceNotFoundException, AccessDeniedException {
-        eventValidator.accessAdminInstructorOrSpecificUser(userId, principal);
-        return eventService.isMember(eventId, userId);
-    }
-
-    /**
-     * Gets the list of checked in participants for the given event.
-     *
-     * @param eventId   Event ID
-     * @param principal Principal
-     * @return list of User IDs
-     * @throws AccessDeniedException     when user doesn't have permission to
-     *                                   perform operation
-     */
-    @GetMapping(path = {
-            "/{eventId}/participants/checkedin"
-    })
-    public List<Long> getAllCheckedInParticipants(@PathVariable("eventId") final long eventId,
-            final Principal principal)
-            throws AccessDeniedException {
-        eventValidator.accessAdminOrInstructor(principal);
-        return eventService.getAllEventCheckedInUsers(eventId);
     }
 
     /**
@@ -254,65 +181,27 @@ public class EventController {
      *
      * @param type      EventType
      * @param count     number of events to be returned
-     * @param principal Principal
      * @return list of Event
-     * @throws ResourceNotFoundException when address is not found
-     * @throws AccessDeniedException     when user doesn't have permission to
-     *                                   perform operation
      */
-    @GetMapping(path = {
-            "/upcoming/{type}/{count}"
-    })
-    public List<EventSummary> upcoming(
+    @GetMapping(path = { "/upcoming/{type}/{count}" })
+    public List<Event> upcoming(
             @PathVariable("type") final EventType type,
-            @PathVariable("count") final int count,
-            final Principal principal)
-            throws ResourceNotFoundException, AccessDeniedException {
+            @PathVariable("count") final int count) {
         int actualCount = count;
         if (actualCount > MAX_UPCOMING_COUNT) {
             actualCount = MAX_UPCOMING_COUNT;
         }
-        List<Event> upcomingEvents = eventService
+        return eventService
                 .getAll()
                 .stream()
                 .filter(
                         event -> event.getStartTime().isAfter(LocalDateTime.now())
                                 && !event.isPrivateEvent()
                                 && event.getEventType() == type)
-                .sorted(Comparator.comparing(Event::getStartTime))
+                .sorted(Comparator.comparing(EventEntity::getStartTime))
                 .limit(actualCount)
+                .map(this::map)
                 .collect(Collectors.toList());
-        List<EventSummary> eventSummaries = new ArrayList<>();
-        for (Event event : upcomingEvents) {
-            eventSummaries.add(eventService.getEventSummary(event.getId()));
-        }
-
-        return eventSummaries;
-    }
-
-    /**
-     * RSVP's a user for an event.
-     *
-     * @param eventId   event ID
-     * @param userId    user ID
-     * @param confirm   confirm or decline
-     * @param type      NotificationType
-     * @param principal Principal
-     * @throws ResourceNotFoundException when event or user is not found
-     * @throws AccessDeniedException     when user doesn't have permission to
-     *                                   perform operation
-     */
-    @PostMapping(path = {
-            "/{eventId}/rsvp/{userId}/{confirm}/{type}"
-    })
-    public void rsvp(
-            @PathVariable("eventId") final long eventId,
-            @PathVariable("userId") final long userId,
-            @PathVariable("confirm") final boolean confirm,
-            @PathVariable("type") final NotificationType type,
-            final Principal principal) throws ResourceNotFoundException, AccessDeniedException {
-        eventValidator.accessAdminInstructorOrSpecificUser(userId, principal);
-        eventService.rsvp(eventId, userId, confirm);
     }
 
     /**
@@ -325,15 +214,13 @@ public class EventController {
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
-    @PostMapping(path = {
-            "/{eventId}/register/{userId}"
-    })
+    @PostMapping(path = { "/{eventId}/register/{userId}" })
     public void register(
             @PathVariable("eventId") final long eventId,
             @PathVariable("userId") final long userId,
             final Principal principal) throws ResourceNotFoundException, AccessDeniedException {
         eventValidator.accessAdminInstructorOrSpecificUser(userId, principal);
-        final Event event = eventService.get(eventId);
+        final EventEntity event = eventService.get(eventId);
         if ((!event.isPrivateEvent()
                 || (event.isPrivateEvent()
                         && eventValidator.isAdminOrInstructor(principal)))
@@ -352,9 +239,7 @@ public class EventController {
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
-    @PostMapping(path = {
-            "/{eventId}/unregister/{userId}"
-    })
+    @PostMapping(path = { "/{eventId}/unregister/{userId}" })
     public void unregister(
             @PathVariable("eventId") final long eventId,
             @PathVariable("userId") final long userId,
@@ -369,7 +254,6 @@ public class EventController {
      * @param eventId   Long
      * @param principal Principal
      * @return Event's checkin code
-     * @throws ResourceNotFoundException when event is not found
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
@@ -377,10 +261,10 @@ public class EventController {
             "/{eventId}/checkincode"
     })
     public String getCheckinCode(@PathVariable("eventId") final long eventId, final Principal principal)
-            throws ResourceNotFoundException, AccessDeniedException {
+            throws AccessDeniedException {
         eventValidator.accessAnyAuthenticated(principal);
         String code = null;
-        final Event event = eventService.get(eventId);
+        final EventEntity event = eventService.get(eventId);
         if (event != null) {
             code = event.getCheckinCode();
         }
@@ -388,54 +272,24 @@ public class EventController {
     }
 
     /**
-     * Checkin.
-     *
-     * @param userId    User ID
-     * @param eventId   Event ID
-     * @param code      checkin code
-     * @param principal Principal
-     * @return checkin success
-     * @throws ResourceNotFoundException when event or user is not found
-     * @throws AccessDeniedException     when user doesn't have permission to
-     *                                   perform operation
-     */
-    @PostMapping(path = {
-            "/{eventId}/checkin/{userId}/{code}"
-    })
-    public boolean checkin(
-            @PathVariable("eventId") final long eventId,
-            @PathVariable("userId") final long userId,
-            @PathVariable("code") final String code,
-            final Principal principal) throws ResourceNotFoundException, AccessDeniedException {
-        eventValidator.accessAdminInstructorOrSpecificUser(userId, principal);
-        return eventService.checkin(eventId, userId, code);
-    }
-
-    /**
      * Starts an event.
      *
      * @param eventId   Long
      * @param principal Principal
-     * @return started event
-     * @throws ResourceNotFoundException when event is not found
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
-    @PostMapping(path = {
-            "/{eventId}/start"
-    })
-    public Event start(@PathVariable("eventId") final long eventId, final Principal principal)
-            throws ResourceNotFoundException,
-            AccessDeniedException {
+    @PostMapping(path = { "/{eventId}/start" })
+    public void start(@PathVariable("eventId") final long eventId, final Principal principal)
+            throws AccessDeniedException {
         eventValidator.accessAdminOrInstructor(principal);
-        Event event = eventService.get(eventId);
+        final EventEntity event = eventService.get(eventId);
         if (event != null && !event.isStarted()) {
             event.setStarted(true);
             event.setStartTime(LocalDateTime.now(ZoneOffset.UTC));
-            event.setCheckinCode(CodeGenerator.generateCode(CommonConstants.FOUR));
-            event = eventService.store(event);
+            //event.setCheckinCode(CodeGenerator.generateCode(CommonConstants.FOUR));
+            eventService.store(event);
         }
-        return event;
     }
 
     /**
@@ -443,19 +297,14 @@ public class EventController {
      *
      * @param eventId   Long
      * @param principal Principal
-     * @return completed event
-     * @throws ResourceNotFoundException when event is not found
      * @throws AccessDeniedException     when user doesn't have permission to
      *                                   perform operation
      */
-    @PostMapping(path = {
-            "/{eventId}/complete"
-    })
-    public Event complete(@PathVariable("eventId") final long eventId, final Principal principal)
-            throws ResourceNotFoundException,
-            AccessDeniedException {
+    @PostMapping(path = { "/{eventId}/complete" })
+    public void complete(@PathVariable("eventId") final long eventId, final Principal principal)
+            throws AccessDeniedException {
         eventValidator.accessAdminOrInstructor(principal);
-        Event event = eventService.get(eventId);
+        final EventEntity event = eventService.get(eventId);
         if (event != null) {
             if (!event.isStarted()) {
                 event.setStarted(true);
@@ -464,9 +313,48 @@ public class EventController {
             event.setCompleted(true);
             event.setCompletedTime(LocalDateTime.now());
             event.setCheckinCode(null);
-            event = eventService.store(event);
+            eventService.store(event);
         }
+    }
+
+    private Event map(final EventEntity eventEntity) {
+        final Event event = new Event();
+        event.setId(eventEntity.getId());
+        event.setEventType(eventEntity.getEventType());
+        event.setPrivateEvent(eventEntity.isPrivateEvent());
+        event.setCheckinCode(eventEntity.getCheckinCode());
+        event.setCompleted(eventEntity.isCompleted());
+        event.setCalendarUrl(eventEntity.getCalendarUrl());
+        event.setCheckinCodeRequired(eventEntity.isCheckinCodeRequired());
+        event.setCompletedTime(eventEntity.getCompletedTime());
+        event.setCompleted(eventEntity.isCompleted());
+        event.setStarted(eventEntity.isStarted());
+        event.setStartTime(eventEntity.getStartTime());
+        event.setLead(eventEntity.getLead());
+        event.setLessonPlanId(eventEntity.getLessonPlanId());
+        event.setParticipantIds(eventEntity.getParticipants());
+        event.setTitle(eventEntity.getTitle());
         return event;
+    }
+
+    private EventEntity map(final Event event) {
+        final EventEntity eventEntity = new EventEntity();
+        eventEntity.setEventType(event.getEventType());
+        eventEntity.setId(event.getId());
+        eventEntity.setCompleted(event.isCompleted());
+        eventEntity.setPrivateEvent(event.isPrivateEvent());
+        eventEntity.setLead(event.getLead());
+        eventEntity.setStarted(eventEntity.isStarted());
+        eventEntity.setCalendarUrl(eventEntity.getCalendarUrl());
+        eventEntity.setParticipants(event.getParticipantIds());
+        eventEntity.setTitle(event.getTitle());
+        eventEntity.setCompleted(event.isCompleted());
+        eventEntity.setCompletedTime(event.getCompletedTime());
+        eventEntity.setStartTime(event.getStartTime());
+        eventEntity.setCheckinCode(eventEntity.getCheckinCode());
+        eventEntity.setCheckinCodeRequired(eventEntity.isCheckinCodeRequired());
+        eventEntity.setLessonPlanId(eventEntity.getLessonPlanId());
+        return eventEntity;
     }
 
 }
