@@ -27,13 +27,13 @@
 	</parent>
 	<groupId>com.starfireaviation</groupId>
 	<artifactId>events</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1</version>
 	<name>events</name>
 	<description>Events</description>
 	<properties>
 		<java.version>11</java.version>
 		<cucumber.version>7.8.1</cucumber.version>
-		<sa.common.version>0.1.2</sa.common.version>
+		<sa.common.version>0.1.3</sa.common.version>
 		<hazelcast.version>5.2.0</hazelcast.version>
 		<springdoc.version>1.6.11</springdoc.version>
 	</properties>
