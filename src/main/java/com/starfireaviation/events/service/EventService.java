@@ -165,7 +165,7 @@ public class EventService {
      * @return list of User IDs
      */
     public List<Long> getAllSupportingInstructors(final Long eventId) {
-        final Long eventLead = get(eventId).getLead();
+        final Long eventLead = get(eventId).getLeader();
         return getParticipants(eventId)
                 .stream()
                 .distinct()

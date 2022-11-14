@@ -138,7 +138,7 @@ public class EventEntity implements Serializable {
     /**
      * Event lead (or primary instructor).
      */
-    @Column(name = "lead", nullable = false)
-    private Long lead;
+    @Column(name = "leader", nullable = false)
+    private Long leader;
 
 }

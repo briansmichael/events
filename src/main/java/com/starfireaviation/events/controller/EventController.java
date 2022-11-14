@@ -377,7 +377,7 @@ public class EventController {
         event.setCompleted(eventEntity.isCompleted());
         event.setStarted(eventEntity.isStarted());
         event.setStartTime(eventEntity.getStartTime());
-        event.setLead(eventEntity.getLead());
+        event.setLead(eventEntity.getLeader());
         event.setLessonPlanId(eventEntity.getLessonPlanId());
         event.setParticipantIds(eventService.getParticipants(eventEntity.getId()));
         event.setTitle(eventEntity.getTitle());
@@ -396,7 +396,7 @@ public class EventController {
         eventEntity.setId(event.getId());
         eventEntity.setCompleted(event.isCompleted());
         eventEntity.setPrivateEvent(event.isPrivateEvent());
-        eventEntity.setLead(event.getLead());
+        eventEntity.setLeader(event.getLead());
         eventEntity.setStarted(eventEntity.isStarted());
         eventEntity.setCalendarUrl(eventEntity.getCalendarUrl());
         eventEntity.setTitle(event.getTitle());
