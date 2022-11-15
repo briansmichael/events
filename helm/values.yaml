@@ -37,11 +37,11 @@ ingress:
         - events.starfireaviation.com
 resources:
   limits:
-    cpu: 2
-    memory: 2048Mi
+    cpu: 500m
+    memory: 1024Mi
   requests:
-    cpu: 1
-    memory: 2048Mi
+    cpu: 500m
+    memory: 1024Mi
 autoscaling:
   enabled: true
   minReplicas: 1
