@@ -17,35 +17,21 @@
 package com.starfireaviation.events.validation;
 
 import com.starfireaviation.common.exception.AccessDeniedException;
-import com.starfireaviation.common.exception.ConflictException;
 import com.starfireaviation.common.exception.InvalidPayloadException;
 import com.starfireaviation.common.exception.ResourceNotFoundException;
 import com.starfireaviation.common.model.Event;
 import com.starfireaviation.common.model.Role;
 import com.starfireaviation.common.model.User;
-import com.starfireaviation.events.model.EventRepository;
 import com.starfireaviation.events.service.DataService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.security.Principal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 
 /**
  * EventValidator.
  */
 @Slf4j
 public class EventValidator {
-
-    /**
-     * MINUTE_RANGE.
-     */
-    public static final long MINUTE_RANGE = 30;
-
-    /**
-     * EventRepository.
-     */
-    private final EventRepository eventRepository;
 
     /**
      * DataService.
@@ -55,12 +41,9 @@ public class EventValidator {
     /**
      * EventValidator.
      *
-     * @param eRepository EventRepository
      * @param dService    DataService
      */
-    public EventValidator(final EventRepository eRepository,
-                          final DataService dService) {
-        eventRepository = eRepository;
+    public EventValidator(final DataService dService) {
         dataService = dService;
     }
 
@@ -239,13 +222,10 @@ public class EventValidator {
      * Event Validation.
      *
      * @param event Event
-     * @throws ConflictException       when another event occurs within 30 minutes
-     *                                 of the provided event
      * @throws InvalidPayloadException when event information is invalid
      */
-    public void validate(final Event event) throws ConflictException, InvalidPayloadException {
+    public void validate(final Event event) throws InvalidPayloadException {
         empty(event);
-        conflict(event);
     }
 
     /**
@@ -262,28 +242,4 @@ public class EventValidator {
         }
     }
 
-    /**
-     * Ensures new event does not take place within 30 minutes of another event.
-     *
-     * @param event Event
-     * @throws ConflictException when another event occurs within 30 minutes of the
-     *                           provided event
-     */
-    private void conflict(final Event event) throws ConflictException {
-        final LocalDateTime prior = event.getStartTime().minusMinutes(MINUTE_RANGE);
-        final LocalDateTime after = event.getStartTime().plusMinutes(MINUTE_RANGE);
-        final boolean conflict = eventRepository
-                .findAll()
-                .orElse(new ArrayList<>())
-                .stream()
-                .filter(eventEntity -> eventEntity.getStartTime().isAfter(LocalDateTime.now()))
-                .anyMatch(eventEntity -> {
-                    final LocalDateTime entityStartTime = eventEntity.getStartTime();
-                    return entityStartTime.isAfter(prior) && entityStartTime.isBefore(after);
-                });
-        if (conflict) {
-            throw new ConflictException(
-                    String.format("Another event is scheduled within %s minutes of this event", MINUTE_RANGE));
-        }
-    }
 }

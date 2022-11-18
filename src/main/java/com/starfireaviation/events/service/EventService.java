@@ -21,10 +21,14 @@ import com.starfireaviation.events.model.EventEntity;
 import com.starfireaviation.events.model.EventParticipant;
 import com.starfireaviation.events.model.EventParticipantRepository;
 import com.starfireaviation.events.model.EventRepository;
+import com.starfireaviation.events.model.VoteEntity;
+import com.starfireaviation.events.model.VoteRepository;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -40,6 +44,11 @@ public class EventService {
     private final EventRepository eventRepository;
 
     /**
+     * VoteRepository.
+     */
+    private final VoteRepository voteRepository;
+
+    /**
      * EventRepository.
      */
     private final EventParticipantRepository eventParticipantRepository;
@@ -52,14 +61,17 @@ public class EventService {
     /**
      * EventService.
      *
-     * @param eRepository  EventRepository
+     * @param eRepository EventRepository
+     * @param vRepository VoteRepository
      * @param epRepository EventParticipantRepository
-     * @param dService     DataService
+     * @param dService DataService
      */
     public EventService(final EventRepository eRepository,
+                        final VoteRepository vRepository,
                         final EventParticipantRepository epRepository,
                         final DataService dService) {
         eventRepository = eRepository;
+        voteRepository = vRepository;
         eventParticipantRepository = epRepository;
         dataService = dService;
     }
@@ -186,5 +198,74 @@ public class EventService {
                 .stream()
                 .map(EventParticipant::getUserId)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Votes for a lesson to be presented at an event.
+     * Note: Only 1 vote can be cast per user per event.
+     *
+     * @param eventId Event ID
+     * @param lessonPlanId Lesson Plan ID - lesson to be presented
+     * @param userId User ID - user casting vote
+     */
+    public void vote(final Long eventId, final Long userId, final Long lessonPlanId) {
+        final VoteEntity vote = voteRepository.findByEventIdAndUserId(eventId, userId).orElse(new VoteEntity());
+        if (!Objects.equals(lessonPlanId, vote.getLessonPlanId()) && dataService.existsLessonPlan(lessonPlanId)) {
+            vote.setEventId(eventId);
+            vote.setUserId(userId);
+            vote.setLessonPlanId(lessonPlanId);
+            voteRepository.save(vote);
+        }
+    }
+
+    /**
+     * Withdraws vote for a lesson to be presented at an event.
+     * Note: If no vote has been cast, then no action is performed.
+     *
+     * @param eventId Event ID
+     * @param userId User ID - user casting vote
+     */
+    public void withdrawVote(final Long eventId, final Long userId) {
+        voteRepository.findByEventIdAndUserId(eventId, userId).ifPresent(voteRepository::delete);
+    }
+
+    /**
+     * Assigns a lesson plan to events based upon votes received or, if no votes received, by least previous
+     * presentations.
+     */
+    public void assign() {
+        eventRepository.findAll().orElse(new ArrayList<>()).forEach(event -> {
+            final Map<Long, Long> tally = new HashMap<>();
+            voteRepository
+                    .findByEventId(event.getId())
+                    .orElse(new ArrayList<>())
+                    .forEach(vote -> tally.put(vote.getLessonPlanId(),
+                            tally.getOrDefault(vote.getLessonPlanId(), 0L) + 1));
+            Long winningLessonPlanId = Long.MIN_VALUE;
+            Long highestCount = Long.MIN_VALUE;
+            for (Map.Entry<Long, Long> entry : tally.entrySet()) {
+                if (entry.getValue() > highestCount) {
+                    winningLessonPlanId = entry.getKey();
+                    highestCount = entry.getValue();
+                }
+            }
+            if (winningLessonPlanId > 0) {
+                event.setLessonPlanId(winningLessonPlanId);
+                eventRepository.save(event);
+            } else if (event.getLessonPlanId() == null || event.getLessonPlanId() <= 0L) {
+                final Map<Long, Long> previousPresentationMap = dataService.getPastLessonPlanPresentationCounts();
+                Long lowestCount = Long.MAX_VALUE;
+                for (Map.Entry<Long, Long> entry : previousPresentationMap.entrySet()) {
+                    if (entry.getValue() < lowestCount) {
+                        winningLessonPlanId = entry.getKey();
+                        lowestCount = entry.getValue();
+                    }
+                }
+                if (winningLessonPlanId > 0) {
+                    event.setLessonPlanId(winningLessonPlanId);
+                    eventRepository.save(event);
+                }
+            }
+        });
     }
 }

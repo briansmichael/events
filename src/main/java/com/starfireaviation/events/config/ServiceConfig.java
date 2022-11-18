@@ -24,6 +24,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.starfireaviation.common.CommonConstants;
 import com.starfireaviation.events.model.EventParticipantRepository;
 import com.starfireaviation.events.model.EventRepository;
+import com.starfireaviation.events.model.VoteRepository;
 import com.starfireaviation.events.service.DataService;
 import com.starfireaviation.events.service.EventService;
 import com.starfireaviation.events.validation.EventValidator;
@@ -49,16 +50,18 @@ public class ServiceConfig {
     /**
      * EventService.
      *
-     * @param eRepository  EventRepository
+     * @param eRepository EventRepository
+     * @param vRepository VoteRepository
      * @param epRepository EventParticipantRepository
      * @param dService DataService
      * @return EventService
      */
     @Bean
     public EventService eventService(final EventRepository eRepository,
+                                     final VoteRepository vRepository,
                                      final EventParticipantRepository epRepository,
                                      final DataService dService) {
-        return new EventService(eRepository, epRepository, dService);
+        return new EventService(eRepository, vRepository, epRepository, dService);
     }
 
 
@@ -107,13 +110,11 @@ public class ServiceConfig {
      * EventValidator.
      *
      * @param dService DataService
-     * @param eventRepository EventRepository
      * @return EventValidator
      */
     @Bean
-    public EventValidator eventValidator(final EventRepository eventRepository,
-                                         final DataService dService) {
-        return new EventValidator(eventRepository, dService);
+    public EventValidator eventValidator(final DataService dService) {
+        return new EventValidator(dService);
     }
 
     /**

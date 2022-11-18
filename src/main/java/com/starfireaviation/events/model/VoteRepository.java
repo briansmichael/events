@@ -22,37 +22,39 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * EventRepository.
+ * VoteRepository.
  */
-public interface EventRepository extends Repository<EventEntity, Long> {
+public interface VoteRepository extends Repository<VoteEntity, Long> {
 
     /**
-     * Deletes an event.
+     * Deletes a vote.
      *
-     * @param event Event
+     * @param vote Vote
      */
-    void delete(EventEntity event);
+    void delete(VoteEntity vote);
 
     /**
-     * Gets all events.
+     * Gets all votes by event.
      *
-     * @return list of Events
+     * @param eventId Long
+     * @return list of Votes
      */
-    Optional<List<EventEntity>> findAll();
+    Optional<List<VoteEntity>> findByEventId(Long eventId);
 
     /**
-     * Gets an event.
+     * Gets vote by event and user.
      *
-     * @param id Long
-     * @return Event
+     * @param eventId Long
+     * @param userId Long
+     * @return list of Votes
      */
-    Optional<EventEntity> findById(Long id);
+    Optional<VoteEntity> findByEventIdAndUserId(Long eventId, Long userId);
 
     /**
      * Saves an event.
      *
-     * @param event Event
-     * @return Event
+     * @param vote Vote
+     * @return Vote
      */
-    EventEntity save(EventEntity event);
+    VoteEntity save(VoteEntity vote);
 }

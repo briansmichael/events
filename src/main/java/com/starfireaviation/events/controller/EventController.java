@@ -331,7 +331,7 @@ public class EventController {
      *                                   perform operation
      */
     @PostMapping(path = { "/{eventId}/complete" })
-    public void complete(@PathVariable("eventId") final long eventId, final Principal principal)
+    public void complete(@PathVariable("eventId") final Long eventId, final Principal principal)
             throws AccessDeniedException {
         eventValidator.accessAdminOrInstructor(principal);
         final EventEntity event = eventService.get(eventId);
@@ -345,6 +345,55 @@ public class EventController {
             event.setCheckinCode(null);
             eventService.store(event);
         }
+    }
+
+    /**
+     * Votes for a lesson to be presented at an event.
+     * Note: Only 1 vote can be cast per user per event.
+     *
+     * @param eventId Event ID
+     * @param lessonPlanId Lesson Plan ID - lesson to be presented
+     * @param userId User ID - user casting vote
+     * @param principal Principal
+     * @throws AccessDeniedException when user is not who they say they are
+     */
+    @PostMapping(path = { "/{eventId}/vote/{userId}/{lessonPlanId}" })
+    public void vote(@PathVariable("eventId") final Long eventId,
+                     @PathVariable("userId") final Long userId,
+                     @PathVariable("lessonPlanId") final Long lessonPlanId,
+                     final Principal principal)
+            throws AccessDeniedException, InvalidPayloadException {
+        eventValidator.accessAdminInstructorOrSpecificUser(userId, principal);
+        eventValidator.validate(get(eventId, principal));
+        eventService.vote(eventId, userId, lessonPlanId);
+    }
+
+    /**
+     * Withdraws vote for a lesson to be presented at an event.
+     * Note: If no vote has been cast, then no action is performed.
+     *
+     * @param eventId Event ID
+     * @param userId User ID - user casting vote
+     * @param principal Principal
+     * @throws AccessDeniedException when user is not who they say they are
+     */
+    @PostMapping(path = { "/{eventId}/vote/{userId}/withdraw" })
+    public void withdrawVote(@PathVariable("eventId") final Long eventId,
+                             @PathVariable("userId") final Long userId,
+                             final Principal principal)
+            throws AccessDeniedException {
+        eventValidator.accessAdminInstructorOrSpecificUser(userId, principal);
+        eventService.withdrawVote(eventId, userId);
+    }
+
+    /**
+     * Assigns a lesson plan to events based upon votes received or randomly if no votes received.
+     * Also checks recent history of lessons presented, to allow for minimizing duplicate presentations
+     * in a short period of time.
+     */
+    @PostMapping(path = { "/assign" })
+    public void assignLessonPlans() {
+        eventService.assign();
     }
 
     /**

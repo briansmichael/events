@@ -19,6 +19,9 @@ package com.starfireaviation.events.service;
 import com.starfireaviation.common.model.User;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 public class DataService {
 
@@ -40,5 +43,24 @@ public class DataService {
      */
     public User getUser(final Long userId) {
         return null;
+    }
+
+    /**
+     * Gets a map of the number of times each lesson plan has been presented previously.
+     *
+     * @return map of lesson plan presentation counts
+     */
+    public Map<Long, Long> getPastLessonPlanPresentationCounts() {
+        return new HashMap<>();
+    }
+
+    /**
+     * Checks if a LessonPlan exists for the provided ID.
+     *
+     * @param lessonPlanId LessonPlan ID
+     * @return if LessonPlan exists
+     */
+    public boolean existsLessonPlan(final Long lessonPlanId) {
+        return Boolean.FALSE;
     }
 }
