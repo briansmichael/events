@@ -253,7 +253,7 @@ public class EventService {
                 event.setLessonPlanId(winningLessonPlanId);
                 eventRepository.save(event);
             } else if (event.getLessonPlanId() == null || event.getLessonPlanId() <= 0L) {
-                final Map<Long, Long> previousPresentationMap = dataService.getPastLessonPlanPresentationCounts();
+                final Map<Long, Long> previousPresentationMap = getPastLessonPlanPresentationCounts(event);
                 Long lowestCount = Long.MAX_VALUE;
                 for (Map.Entry<Long, Long> entry : previousPresentationMap.entrySet()) {
                     if (entry.getValue() < lowestCount) {
@@ -268,4 +268,21 @@ public class EventService {
             }
         });
     }
+
+    /**
+     * Gets a map of the number of times each lesson plan has been presented previously.
+     *
+     * @return map of lesson plan presentation counts
+     */
+    private Map<Long, Long> getPastLessonPlanPresentationCounts(final EventEntity event) {
+        final Map<Long, Long> map = new HashMap<>();
+        eventRepository
+                .findAll()
+                .orElse(new ArrayList<>())
+                .stream()
+                .filter(e -> e.getStartTime().isBefore(event.getStartTime()))
+                .forEach(e -> map.put(e.getLessonPlanId(), map.getOrDefault(e.getLessonPlanId(), 0L) + 1));
+        return map;
+    }
+
 }
