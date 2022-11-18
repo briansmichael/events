@@ -19,6 +19,9 @@ package com.starfireaviation.events.service;
 import com.starfireaviation.common.model.User;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class DataService {
 
@@ -29,6 +32,11 @@ public class DataService {
      * @return User
      */
     public User getUser(final String name) {
+        // TODO call GET https://users.starfireaviation.com/api/users?username={name}
+        final Long userId = null;
+        if (userId != null) {
+            return getUser(userId);
+        }
         return null;
     }
 
@@ -39,6 +47,7 @@ public class DataService {
      * @return User
      */
     public User getUser(final Long userId) {
+        // TODO call GET https://users.starfireaviation.com/api/users/{userId}
         return null;
     }
 
@@ -49,6 +58,17 @@ public class DataService {
      * @return if LessonPlan exists
      */
     public boolean existsLessonPlan(final Long lessonPlanId) {
+        // TODO call GET https://lessons.starfireaviation.com/api/lessonplans/{lessonPlanId}
         return Boolean.FALSE;
+    }
+
+    /**
+     * Gets all presentable LessonPlans.
+     *
+     * @return list of LessonPlan IDs
+     */
+    public List<Long> getAllPresentableLessonPlans() {
+        // TODO call GET https://lessons.starfireaviation.com/api/lessonplans?group=PVT?presentable=true
+        return new ArrayList<>();
     }
 }

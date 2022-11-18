@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -252,26 +253,24 @@ public class EventService {
             if (winningLessonPlanId > 0) {
                 event.setLessonPlanId(winningLessonPlanId);
                 eventRepository.save(event);
-            } else if (event.getLessonPlanId() == null || event.getLessonPlanId() <= 0L) {
+            } else {
                 final Map<Long, Long> previousPresentationMap = getPastLessonPlanPresentationCounts(event);
-                Long lowestCount = Long.MAX_VALUE;
-                for (Map.Entry<Long, Long> entry : previousPresentationMap.entrySet()) {
-                    if (entry.getValue() < lowestCount) {
-                        winningLessonPlanId = entry.getKey();
-                        lowestCount = entry.getValue();
-                    }
-                }
-                if (winningLessonPlanId > 0) {
-                    event.setLessonPlanId(winningLessonPlanId);
-                    eventRepository.save(event);
-                }
+                // TreeMap Key = Count; Value = LessonPlan ID
+                final TreeMap<Long, Long> map = new TreeMap<>();
+                dataService
+                        .getAllPresentableLessonPlans()
+                        .forEach(lpId -> map.put(previousPresentationMap.getOrDefault(lpId, 0L), lpId));
+                event.setLessonPlanId(map.get(map.firstKey()));
+                eventRepository.save(event);
             }
         });
     }
 
     /**
      * Gets a map of the number of times each lesson plan has been presented previously.
+     * Key = LessonPlan ID; Value = Count
      *
+     * @param event Event
      * @return map of lesson plan presentation counts
      */
     private Map<Long, Long> getPastLessonPlanPresentationCounts(final EventEntity event) {
